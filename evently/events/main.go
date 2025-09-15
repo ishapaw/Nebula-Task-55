@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"time"
-	"fmt"
 
 	"events/auth"
 	"events/controllers"
@@ -20,7 +19,12 @@ import (
 
 func main() {
 	
-	uri := fmt.Sprintf("mongodb+srv://ishapawargs_db_user:%s@cluster0.ixdvfu9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",mustGetEnv("DB_EVENTS_PASSWORD"))
+	dbHost := mustGetEnv("DB_EVENTS_HOST")
+	dbPort := mustGetEnv("DB_EVENTS_PORT")
+	dbUser := mustGetEnv("DB_EVENTS_USER")
+	dbPass := mustGetEnv("DB_EVENTS_PASSWORD")
+
+	uri := "mongodb://" + dbUser + ":" + dbPass + "@" + dbHost + ":" + dbPort
 
 	var client *mongo.Client
 	var err error
