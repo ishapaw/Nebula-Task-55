@@ -35,7 +35,7 @@ func main() {
 
 	routes.RegisterRoutes(r, producer, redis)
 
-	port := mustGetEnv("PORT_GATEWAY")
+	port := mustGetEnv("PORT")
 	log.Println("Gateway service running on port " + port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal("Failed to start Gateway service:", err)
