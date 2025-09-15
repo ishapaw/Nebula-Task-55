@@ -34,13 +34,12 @@ func main() {
 	)
 
 	routes.RegisterRoutes(r, producer, redis)
-
 	port := mustGetEnv("PORT")
 	log.Println("Gateway service running on port " + port)
-	if err := r.Run(":" + port); err != nil {
+	if err := r.Run("0.0.0.0:" + port); err != nil {
 		log.Fatal("Failed to start Gateway service:", err)
 	}
-
+	
 }
 
 func newRedisClient(host, port, pass string) *redis.Client {
