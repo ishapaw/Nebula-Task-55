@@ -1,0 +1,374 @@
+version: "3.9"
+
+services:
+
+  bookings-consumer:
+    build: ./bookings/bookings_consumer
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - REDIS_REQUESTS_HOST=redis-requests
+      - REDIS_REQUESTS_PORT=6379
+      - REDIS_SEATS_HOST=redis-seats
+      - REDIS_SEATS_PORT=6379
+      - POSTGRES_BOOKINGS_HOST=postgres-bookings
+      - POSTGRES_BOOKINGS_PORT=5432
+      - POSTGRES_BOOKINGS_USER=admin
+      - POSTGRES_BOOKINGS_PASSWORD=secret
+      - POSTGRES_BOOKINGS_DB=bookingsdb
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis-requests:
+        condition: service_healthy
+      redis-seats:
+        condition: service_healthy
+      postgres-bookings:
+        condition: service_healthy 
+    restart: always
+    networks:
+      - evently-net
+    deploy:
+      replicas: 3 
+
+  cancel-consumer:
+    build: ./bookings/cancel_consumer
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - REDIS_REQUESTS_HOST=redis-requests
+      - REDIS_REQUESTS_PORT=6379
+      - REDIS_SEATS_HOST=redis-seats
+      - REDIS_SEATS_PORT=6379
+      - POSTGRES_BOOKINGS_HOST=postgres-bookings
+      - POSTGRES_BOOKINGS_PORT=5432
+      - POSTGRES_BOOKINGS_USER=admin
+      - POSTGRES_BOOKINGS_PASSWORD=secret
+      - POSTGRES_BOOKINGS_DB=bookingsdb
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis-requests:
+        condition: service_healthy
+      redis-seats:
+        condition: service_healthy
+      postgres-bookings:
+        condition: service_healthy 
+    restart: always
+    networks:
+      - evently-net
+    deploy:
+      replicas: 1
+
+  update-seats-consumer:
+    build: ./bookings/update_seats_consumer
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - REDIS_UPDATED_SEATS_HOST=redis-updated-seats
+      - REDIS_UPDATED_SEATS_PORT=6379
+      - REDIS_UPDATED_SEATS_PASSWORD=secret
+      - DB_EVENTS_HOST=mongodb
+      - DB_EVENTS_PORT=27017
+      - DB_EVENTS_USER=admin
+      - DB_EVENTS_PASSWORD=secret
+      - DB_EVENTS_NAME=eventsdb
+    depends_on:
+      - kafka
+      - redis-updated-seats
+      - mongodb
+    restart: always
+    networks:
+      - evently-net
+    deploy:
+      replicas: 1
+
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - evently-net
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"     
+      - "29092:29092"   
+    networks:
+      - evently-net
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: usersdb
+    ports:
+      - "5433:5432"   # host:container (connect from host via localhost:5433)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - evently-net
+
+
+  postgres-bookings:
+    image: postgres:15
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d bookingsdb"]
+      interval: 2s
+      retries: 5
+    container_name: postgres-bookings
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: bookingsdb
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_bookings_data:/var/lib/postgresql/data
+    networks:
+      - evently-net
+    
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secret
+      MONGO_INITDB_DATABASE: eventsdb
+    ports:
+      - "27018:27017"   
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - evently-net
+
+
+  users-service:
+    build:
+      context: ./users
+      dockerfile: Dockerfile
+    env_file:
+      - .env  
+    container_name: users-service
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: secret
+      DB_NAME: usersdb
+    ports:
+      - "8081:8081"
+    networks:
+      - evently-net
+
+  bookings-view-service:
+    build:
+      context: ./bookings_view
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    container_name: bookings-view-service
+    depends_on:
+      - postgres-bookings
+    environment:
+      DB_HOST: postgres-bookings
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: secret
+      DB_NAME: bookingsdb
+    ports:
+      - "8084:8084"
+    networks:
+      - evently-net
+
+  events-service:
+    build:
+      context: ./events
+      dockerfile: Dockerfile  
+    env_file:
+      - .env
+    container_name: events-service
+    depends_on:
+      - mongodb
+    environment:
+      DB_HOST: mongodb
+      DB_PORT: 27017
+      DB_USER: admin
+      DB_PASSWORD: secret
+      DB_NAME: eventsdb
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: secret
+    ports:
+      - "8082:8082"
+    networks:
+      - evently-net
+
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile 
+    env_file:
+      - .env  
+    container_name: gateway
+    depends_on:
+      - users-service
+      - events-service
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      USERS_SERVICE_URL: http://users-service:8081
+      EVENTS_SERVICE_URL: http://events-service:8082
+      KAFKA_BROKER: kafka:9092 
+      REDIS_RATE_LIMITER_HOST: redis-rate-limiter
+      REDIS_RATE_LIMITER_PORT: 6379
+    networks:
+      - evently-net
+
+
+  redis:
+    image: redis:7
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "100mb", "--maxmemory-policy", "allkeys-lfu"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - evently-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  redis-seats:
+    image: redis:7
+    container_name: redis-seats
+    command: ["redis-server", "--appendonly", "yes"] 
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_seats_data:/data
+    networks:
+      - evently-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  redis-requests:
+    image: redis:7
+    container_name: redis-requests
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "50mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6381:6379"   # expose separately on host
+    volumes:
+      - redis_requests_data:/data
+    networks:
+      - evently-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  redis-price:
+    image: redis:7
+    container_name: redis-price
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis_price_data:/data
+    networks:
+      - evently-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  redis-updated-seats:
+    image: redis:7
+    container_name: redis-updated-seats
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6383:6379"
+    volumes:
+      - redis_updated_seats_data:/data
+    networks:
+      - evently-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+  redis-rate-limiter:
+    image: redis:7
+    container_name: redis-rate-limiter
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6384:6379"
+    volumes:
+      - redis_rate_limiter_data:/data
+    networks:
+      - evently-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+
+
+volumes:
+  postgres_data:
+  postgres_bookings_data:
+  mongo_data:
+  redis_data:
+  redis_seats_data:
+  redis_requests_data:
+  redis_price_data:
+  redis_updated_seats_data:
+  redis_rate_limiter_data:
+
+networks:
+  evently-net:
+    driver: bridge
