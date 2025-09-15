@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
-	"gateway/middleware"
 	"gateway/kafka"
+	"gateway/middleware"
 	"gateway/proxy"
 
 	"github.com/gin-gonic/gin"
@@ -36,9 +37,8 @@ func HandleBookingRequest(c *gin.Context) {
 
 		body["request_id"] = uuid.New().String()
 		log.Println("Generated new request_id:", body["request_id"])
-	
+
 	}
-		
 
 	userID := c.GetHeader("X-User-Id")
 	if userID == "" {
@@ -67,7 +67,7 @@ func HandleBookingRequest(c *gin.Context) {
 	}
 
 	log.Println("request successfully queued")
-	c.JSON(http.StatusAccepted, gin.H{"status": "request queued", "request_id" : body["request_id"]})
+	c.JSON(http.StatusAccepted, gin.H{"status": "request queued", "request_id": body["request_id"]})
 }
 
 func RegisterRoutes(r *gin.Engine, prod *kafka.Producer, redis *redis.Client) {
@@ -76,21 +76,25 @@ func RegisterRoutes(r *gin.Engine, prod *kafka.Producer, redis *redis.Client) {
 
 	api := r.Group("/api")
 
-	api.Any("/users/*path", proxy.ReverseProxy("http://users-service:8081"))
+	usersBaseURL := mustGetEnv("USERS_SERVICE_URL")
+	eventsBaseURL := mustGetEnv("EVENTS_SERVICE_URL")
+	bookingsViewBaseURL := mustGetEnv("BOOKINGS_VIEW_SERVICE_URL")
+
+	api.Any("/users/*path", proxy.ReverseProxy(usersBaseURL))
 
 	protected := api.Group("/v1")
 	protected.Use(middleware.AuthMiddleware())
 
 	protected.Use(middleware.RateLimitMiddleware(redis))
 	{
-		
-		protected.Any("/events/*path", proxy.ReverseProxy("http://events-service:8082"))
+
+		protected.Any("/events/*path", proxy.ReverseProxy(eventsBaseURL))
 		protected.Any("/bookings/*path", func(c *gin.Context) {
 			method := c.Request.Method
 			log.Println("Received /bookings request, method:", method)
 
 			if method == http.MethodGet {
-				proxy.ReverseProxy("http://bookings-view-service:8084")(c)
+				proxy.ReverseProxy(bookingsViewBaseURL)(c)
 			} else if method == http.MethodPost || method == http.MethodDelete {
 				HandleBookingRequest(c)
 			} else {
@@ -110,4 +114,12 @@ func selectTopic(method string) string {
 	default:
 		return "bookings.requests"
 	}
+}
+
+func mustGetEnv(key string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		log.Fatalf("Environment variable %s is required but not set", key)
+	}
+	return value
 }
