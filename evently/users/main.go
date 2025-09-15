@@ -4,8 +4,6 @@ import (
 	"log"
 	"os"
 	"time"
-	"net"
-	"context"
 	"users/controllers"
 	"users/repository"
 	"users/service"
