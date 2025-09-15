@@ -88,10 +88,11 @@ func main() {
 	}
 
 	port := mustGetEnv("PORT")
-	log.Println("Events service running on port " + port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatal("Failed to start events server:", err)
-	}
+log.Println("Events service running on port " + port)
+if err := r.Run("0.0.0.0:" + port); err != nil {
+    log.Fatal("Failed to start Events service:", err)
+}
+
 }
 
 func newRedisClient(host, port, pass string) *redis.Client {
