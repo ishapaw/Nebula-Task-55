@@ -2,9 +2,12 @@ package kafka
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
+	"os"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl/plain"
 )
 
 type Producer struct {
@@ -12,9 +15,21 @@ type Producer struct {
 }
 
 func NewProducer(broker string) *Producer {
+	key, _ := os.LookupEnv("KAFKA_KEY")
+	secret, _ := os.LookupEnv("KAFKA_SECRET")
+
+	mechanism := plain.Mechanism{
+		Username: key,
+		Password: secret,
+	}
+
 	return &Producer{
 		writer: &kafka.Writer{
-			Addr:     kafka.TCP(broker),
+			Addr: kafka.TCP(broker),
+			Transport: &kafka.Transport{
+				SASL: mechanism,
+				TLS:  &tls.Config{},
+			},
 			Balancer: &kafka.LeastBytes{},
 		},
 	}
