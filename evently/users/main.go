@@ -47,11 +47,15 @@ func main() {
 	r.POST("/api/users/register", userController.Register)
 	r.POST("/api/users/login", userController.Login)
 
-	port := mustGetEnv("PORT")
-	log.Println("Users service running on port " + port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatal("Failed to start users service:", err)
-	}
+	port := os.Getenv("PORT") // Railway injects this automatically
+if port == "" {
+    port = "8080" // fallback for local dev
+}
+log.Println("Users service running on port " + port)
+if err := r.Run("0.0.0.0:" + port); err != nil {
+    log.Fatal("Failed to start users service:", err)
+}
+
 
 }
 
