@@ -20,7 +20,7 @@ func main() {
 	dbPass := mustGetEnv("DB_PASSWORD")
 	dbName := mustGetEnv("DB_NAME")
 
-	dsn := "host=" + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort + " sslmode=disable"
+	dsn := "host=" + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort + " sslmode=require"
 
 	var db *gorm.DB
 	var err error
