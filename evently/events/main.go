@@ -23,9 +23,10 @@ func main() {
 	dbPort := mustGetEnv("DB_EVENTS_PORT")
 	dbUser := mustGetEnv("DB_EVENTS_USER")
 	dbPass := mustGetEnv("DB_EVENTS_PASSWORD")
+	dbName := mustGetEnv("DB_EVENTS_NAME")
 
 	uri := "mongodb://" + dbUser + ":" + dbPass + "@" + dbHost + ":" + dbPort
-
+	
 	var client *mongo.Client
 	var err error
 
@@ -52,7 +53,7 @@ func main() {
 		log.Fatal("Failed to connect to MongoDB:", err)
 	}
 
-	db := client.Database("eventsdb")
+	db := client.Database(dbName)
 	repo := repository.NewEventRepository(db)
 
 	redisClient := newRedisClient(mustGetEnv("REDIS_HOST"), mustGetEnv("REDIS_PORT"), mustGetEnv("REDIS_PASSWORD"))
