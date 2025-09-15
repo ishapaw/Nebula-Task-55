@@ -27,11 +27,6 @@ func main() {
 	var db *gorm.DB
 	var err error
 
-	net.DefaultResolver.PreferGo = true
-    net.DefaultResolver.Dial = func(ctx context.Context, network, address string) (net.Conn, error) {
-        return net.Dial("tcp4", address)
-    }
-
 	for i := 0; i < 10; i++ {
 		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err == nil {
