@@ -17,7 +17,7 @@ func main() {
 
 	r := gin.Default()
 
-	kafkaBrokers := mustGetEnv("KAFKA_BROKER")
+	kafkaBrokers := mustGetEnv("KAFKA_BROKERS")
 	producer := kafka.NewProducer(kafkaBrokers)
 
 	if producer == nil {
