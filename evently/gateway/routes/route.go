@@ -108,11 +108,11 @@ func RegisterRoutes(r *gin.Engine, prod *kafka.Producer, redis *redis.Client) {
 func selectTopic(method string) string {
 	switch method {
 	case http.MethodPost:
-		return "bookings.requests"
+		return "booking"
 	case http.MethodDelete:
-		return "cancel.requests"
+		return "cancel"
 	default:
-		return "bookings.requests"
+		return "booking"
 	}
 }
 
