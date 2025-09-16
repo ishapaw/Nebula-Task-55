@@ -1,0 +1,3 @@
+cancel: ./cancel_consumer
+bookings: ./bookings_consumer
+update_seats: ./update_seats_consumer
