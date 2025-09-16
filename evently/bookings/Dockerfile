@@ -3,6 +3,9 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
+# Install goreman
+RUN go install github.com/mattn/goreman@latest
+
 # cancel_consumer
 WORKDIR /app/cancel_consumer
 COPY cancel_consumer/go.mod cancel_consumer/go.sum ./
@@ -35,14 +38,10 @@ COPY --from=builder /bin/cancel_consumer .
 COPY --from=builder /bin/bookings_consumer .
 COPY --from=builder /bin/update_seats_consumer .
 
+# Copy goreman (from Go bin path in builder)
+COPY --from=builder /go/bin/goreman /usr/local/bin/goreman
+
 # Add Procfile
 COPY Procfile .
 
-# Install goreman (Procfile runner)
-RUN apk add --no-cache curl bash && \
-    curl -L https://github.com/mattn/goreman/releases/download/v0.3.11/goreman_linux_amd64 \
-    -o /usr/local/bin/goreman && \
-    chmod +x /usr/local/bin/goreman
-
-# Run all consumers using goreman
 CMD ["goreman", "start"]
