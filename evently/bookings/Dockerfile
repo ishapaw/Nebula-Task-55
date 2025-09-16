@@ -24,24 +24,22 @@ RUN go mod download
 COPY update_seats_consumer/ .
 RUN go build -o /bin/update_seats_consumer
 
-# Install goreman (Procfile manager)
-RUN go install github.com/mattn/goreman@latest
-
-
-# ---- Runtime stage ----
+# ---- Runtime ----
 FROM alpine:latest
 WORKDIR /app
 
-# Copy binaries
 COPY --from=builder /bin/cancel_consumer .
 COPY --from=builder /bin/bookings_consumer .
 COPY --from=builder /bin/update_seats_consumer .
 
-# Copy goreman binary
-COPY --from=builder /go/bin/goreman /usr/local/bin/goreman
-
-# Copy Procfile
+# Add Procfile
 COPY Procfile .
 
-# Run all consumers with goreman
-CMD ["goreman", "start", "-f", "Procfile"]
+# Install goreman (Procfile runner)
+RUN apk add --no-cache curl bash && \
+    curl -sL https://github.com/mattn/goreman/releases/download/v0.3.11/goreman_linux_amd64.tar.gz \
+    | tar -xz -C /usr/local/bin && \
+    chmod +x /usr/local/bin/goreman
+
+# Start with Procfile
+CMD ["goreman", "start"]
