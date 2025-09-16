@@ -8,6 +8,7 @@ import (
 )
 
 type BookingsViewRepository interface {
+	GetAllBookings(page, limit int64) ([]models.Booking, error)
 	GetByID(id string) (*models.Booking, error)
 	GetByEventID(eventID string, limit, page int64, status string) ([]models.Booking, error)
 	GetByUserID(userID string, limit, page int64, status string) ([]models.Booking, error)
@@ -23,6 +24,21 @@ type bookingsViewRepository struct {
 func NewBookingsViewRepository(db *gorm.DB) BookingsViewRepository {
 	return &bookingsViewRepository{db}
 }
+
+func (r *bookingsViewRepository) GetAllBookings(page, limit int64) ([]models.Booking, error) {
+    var bookings []models.Booking
+
+    offset := int((page - 1) * limit)
+
+    if err := r.db.
+        Limit(int(limit)).
+        Offset(offset).
+        Find(&bookings).Error; err != nil {
+        return nil, err
+    }
+    return bookings, nil
+}
+
 
 func (r *bookingsViewRepository) GetByID(id string) (*models.Booking, error) {
 	var booking models.Booking

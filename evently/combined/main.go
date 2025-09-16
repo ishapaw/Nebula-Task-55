@@ -57,14 +57,15 @@ func main() {
 	{
 		api.GET("/bookings/:id", bookingController.GetBookingByID)
 		api.GET("/bookings/user/:user_id", bookingController.GetBookingsByUserID)
-		api.GET("/bookings/event/:event_id", bookingController.GetBookingsByEventID)
 		api.GET("/bookings/request/:request_id", bookingController.GetBookingByRequestID)
 
-		admin := api.Group("/bookings/analytics")
+		admin := api.Group("/bookings")
 		admin.Use(auth.AdminOnly())
 		{
-			admin.GET("/total-bookings", bookingController.GetTotalBookings)
-			admin.GET("/dailyStats", bookingController.GetDailyBookingStats)
+			admin.GET("/all", bookingController.GetAllBookings)
+			admin.GET("/event/:event_id", bookingController.GetBookingsByEventID)
+			admin.GET("/analytics/total-bookings", bookingController.GetTotalBookings)
+			admin.GET("/analytics/dailyStats", bookingController.GetDailyBookingStats)
 		}
 	}
 

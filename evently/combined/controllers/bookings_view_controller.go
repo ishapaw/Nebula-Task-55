@@ -33,6 +33,19 @@ func (c *BookingsViewController) GetBookingByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, booking)
 }
 
+func (c *BookingsViewController) GetAllBookings(ctx *gin.Context) {
+	page, _ := strconv.ParseInt(ctx.DefaultQuery("page", "1"), 10, 64)
+	limit, _ := strconv.ParseInt(ctx.DefaultQuery("limit", "10"), 10, 64)
+
+	bookings, err := c.bookingsViewService.GetAllBookings(page,limit)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, bookings)
+}
+
 func (c *BookingsViewController) GetBookingsByEventID(ctx *gin.Context) {
 	eventID := ctx.Param("event_id")
 	status := ctx.DefaultQuery("status", "all")

@@ -7,6 +7,7 @@ import (
 )
 
 type BookingsViewService interface {
+	GetAllBookings(page,limit int64) ([]models.Booking, error)
 	GetBookingByID(id string) (*models.Booking, error)
 	GetBookingsByEventID(eventID string, limit, page int64, status string) ([]models.Booking, error)
 	GetBookingByRequestID(reqID string) (*models.Booking, error)
@@ -22,6 +23,11 @@ type bookingsViewService struct {
 func NewBookingsViewService(repo repository.BookingsViewRepository) BookingsViewService {
 	return &bookingsViewService{repo: repo}
 }
+
+func (s *bookingsViewService) GetAllBookings(page, limit int64) ([]models.Booking, error) {
+	return s.repo.GetAllBookings(page, limit)
+}
+
 
 func (s *bookingsViewService) GetBookingByID(id string) (*models.Booking, error) {
 	booking, err := s.repo.GetByID(id)
