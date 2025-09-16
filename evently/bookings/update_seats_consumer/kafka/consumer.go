@@ -34,13 +34,15 @@ func NewReader(broker, topic, groupID string) *Reader {
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{broker}, // example: "pkc-l7pr2.ap-south-1.aws.confluent.cloud:443"
-		GroupID: groupID,
-		Topic:   topic,
-		Dialer:  dialer,
-		MinBytes: 1,       // 1B minimum per fetch
-		MaxBytes: 10e6,    // 10MB maximum per fetch
+		Brokers:     []string{broker},
+		GroupID:     groupID,
+		Topic:       topic,
+		Dialer:      dialer,
+		MinBytes:    1,
+		MaxBytes:    10e6,
+		StartOffset: kafka.FirstOffset, 
 	})
+	
 
 	return &Reader{reader: reader}
 }
