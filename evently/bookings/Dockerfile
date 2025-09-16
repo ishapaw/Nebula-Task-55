@@ -1,43 +1,43 @@
-# ---- Build stage ----
-FROM golang:1.22 AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# Copy everything
-COPY . .
-
-# Build each consumer binary
-WORKDIR /app/bookings/cancel_consumer
+# cancel_consumer
+WORKDIR /app/cancel_consumer
+COPY cancel_consumer/go.mod cancel_consumer/go.sum ./
+RUN go mod download
+COPY cancel_consumer/ .
 RUN go build -o /bin/cancel_consumer
 
-WORKDIR /app/bookings/bookings_consumer
+# bookings_consumer
+WORKDIR /app/bookings_consumer
+COPY bookings_consumer/go.mod bookings_consumer/go.sum ./
+RUN go mod download
+COPY bookings_consumer/ .
 RUN go build -o /bin/bookings_consumer
 
-WORKDIR /app/bookings/update_seats_consumer
+# update_seats_consumer
+WORKDIR /app/update_seats_consumer
+COPY update_seats_consumer/go.mod update_seats_consumer/go.sum ./
+RUN go mod download
+COPY update_seats_consumer/ .
 RUN go build -o /bin/update_seats_consumer
 
 
-# ---- Runtime stage ----
-FROM debian:bookworm-slim
-
+# ---- Runtime ----
+FROM alpine:latest
 WORKDIR /app
 
-# Copy built binaries
-COPY --from=builder /bin/cancel_consumer /app/
-COPY --from=builder /bin/bookings_consumer /app/
-COPY --from=builder /bin/update_seats_consumer /app/
-
-# Install forego (process manager)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget unzip ca-certificates && \
-    wget -q https://github.com/ddollar/forego/releases/download/v0.17.2/forego-linux-amd64.tgz && \
-    tar -xvzf forego-linux-amd64.tgz && \
-    mv forego /usr/local/bin/ && \
-    rm forego-linux-amd64.tgz && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /bin/cancel_consumer .
+COPY --from=builder /bin/bookings_consumer .
+COPY --from=builder /bin/update_seats_consumer .
 
 # Add Procfile
-COPY Procfile /app/Procfile
+COPY Procfile .
 
-# Start all consumers with forego
+# Install forego (for multiple processes)
+RUN apk add --no-cache curl bash && \
+    curl -sL https://github.com/ddollar/forego/releases/download/v0.17.2/forego-linux-amd64.tgz \
+    | tar -xz -C /usr/local/bin
+
 CMD ["forego", "start", "-r"]
