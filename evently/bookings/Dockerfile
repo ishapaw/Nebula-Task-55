@@ -35,9 +35,10 @@ COPY --from=builder /bin/update_seats_consumer .
 # Add Procfile
 COPY Procfile .
 
-# Install forego (for multiple processes)
+# Install forego (process manager)
 RUN apk add --no-cache curl bash && \
-    curl -sL https://github.com/ddollar/forego/releases/download/v0.17.2/forego-linux-amd64.tgz \
-    | tar -xz -C /usr/local/bin
+    curl -sL https://github.com/ddollar/forego/releases/download/v0.17.2/forego-linux-amd64 \
+    -o /usr/local/bin/forego && \
+    chmod +x /usr/local/bin/forego
 
 CMD ["forego", "start", "-r"]
