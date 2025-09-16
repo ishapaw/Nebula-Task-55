@@ -40,7 +40,7 @@ func NewReader(broker, topic, groupID string) *Reader {
 		Dialer:   dialer,
 		MinBytes: 1,
 		MaxBytes: 10e6,
-		// remove CommitInterval to avoid auto commit
+		StartOffset: kafka.FirstOffset,
 	})
 
 	return &Reader{reader: reader}
