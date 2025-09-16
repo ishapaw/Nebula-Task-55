@@ -1,3 +1,4 @@
+# ---- Build stage ----
 FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
@@ -23,22 +24,24 @@ RUN go mod download
 COPY update_seats_consumer/ .
 RUN go build -o /bin/update_seats_consumer
 
+# Install goreman (Procfile manager)
+RUN go install github.com/mattn/goreman@latest
 
-# ---- Runtime ----
+
+# ---- Runtime stage ----
 FROM alpine:latest
 WORKDIR /app
 
+# Copy binaries
 COPY --from=builder /bin/cancel_consumer .
 COPY --from=builder /bin/bookings_consumer .
 COPY --from=builder /bin/update_seats_consumer .
 
-# Add Procfile
+# Copy goreman binary
+COPY --from=builder /go/bin/goreman /usr/local/bin/goreman
+
+# Copy Procfile
 COPY Procfile .
 
-# Install forego (process manager)
-RUN apk add --no-cache curl bash && \
-    curl -sL https://github.com/ddollar/forego/releases/download/v0.17.2/forego-linux-amd64 \
-    -o /usr/local/bin/forego && \
-    chmod +x /usr/local/bin/forego
-
-CMD ["forego", "start", "-r"]
+# Run all consumers with goreman
+CMD ["goreman", "start", "-f", "Procfile"]
