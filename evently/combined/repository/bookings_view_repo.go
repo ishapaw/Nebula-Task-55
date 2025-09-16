@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"bookings_view/models"
+	"combined/models"
 	"errors"
 
 	"gorm.io/gorm"

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"bookings_view/models"
-	"bookings_view/repository"
+	"combined/models"
+	"combined/repository"
 	"errors"
 )
 

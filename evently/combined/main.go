@@ -4,9 +4,11 @@ import (
 	"log"
 	"os"
 	"time"
-	"users/controllers"
-	"users/repository"
-	"users/service"
+
+	"combined/repository"
+	"combined/controllers"
+	"combined/service"
+	"combined/auth"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -47,15 +49,33 @@ func main() {
 	r.POST("/api/users/register", userController.Register)
 	r.POST("/api/users/login", userController.Login)
 
-	port := os.Getenv("PORT") // Railway injects this automatically
-if port == "" {
-    port = "8080" // fallback for local dev
-}
-log.Println("Users service running on port " + port)
-if err := r.Run("0.0.0.0:" + port); err != nil {
-    log.Fatal("Failed to start users service:", err)
-}
+	bookingRepo := repository.NewBookingsViewRepository(db)
+	bookingService := service.NewBookingsViewService(bookingRepo)
+	bookingController := controllers.NewBookingsViewController(bookingService)
 
+	api := r.Group("/api/v1")
+	{
+		api.GET("/bookings/:id", bookingController.GetBookingByID)
+		api.GET("/bookings/user/:user_id", bookingController.GetBookingsByUserID)
+		api.GET("/bookings/event/:event_id", bookingController.GetBookingsByEventID)
+		api.GET("/bookings/request/:request_id", bookingController.GetBookingByRequestID)
+
+		admin := api.Group("/bookings/analytics")
+		admin.Use(auth.AdminOnly())
+		{
+			admin.GET("/total-bookings", bookingController.GetTotalBookings)
+			admin.GET("/dailyStats", bookingController.GetDailyBookingStats)
+		}
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // fallback for local dev
+	}
+	log.Println("Combined service running on port " + port)
+	if err := r.Run("0.0.0.0:" + port); err != nil {
+		log.Fatal("Failed to start combined service:", err)
+	}
 
 }
 

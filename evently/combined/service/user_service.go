@@ -4,8 +4,8 @@ import (
 	"errors"
 	"os"
 	"time"
-	"users/models"
-	"users/repository"
+	"combined/models"
+	"combined/repository"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"

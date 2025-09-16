@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"bookings_view/service"
+	"combined/service"
 	"net/http"
 	"strconv"
 

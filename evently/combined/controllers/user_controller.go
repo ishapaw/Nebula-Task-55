@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"users/models"
-	"users/service"
+	"combined/models"
+	"combined/service"
 
 	"github.com/gin-gonic/gin"
 )
