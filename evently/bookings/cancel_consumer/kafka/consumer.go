@@ -49,6 +49,8 @@ func NewReader(broker, topic, groupID string) *Reader {
 // Start begins consuming messages and calls the handler for each one
 // Commits offsets ONLY after handler succeeds
 func (r *Reader) Start(ctx context.Context, handler func(key, value []byte) error) {
+	log.Print("starting to read")
+	
 	for {
 		m, err := r.reader.ReadMessage(ctx)
 		if err != nil {
