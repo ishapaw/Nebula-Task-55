@@ -34,44 +34,48 @@ func NewReader(broker, topic, groupID string) *Reader {
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:     []string{broker},
-		GroupID:     groupID,
-		Topic:       topic,
-		Dialer:      dialer,
-		MinBytes:    1,
-		MaxBytes:    10e6,
-		StartOffset: kafka.FirstOffset, 
+		Brokers:  []string{broker},
+		GroupID:  groupID,
+		Topic:    topic,
+		Dialer:   dialer,
+		MinBytes: 1,
+		MaxBytes: 10e6,
+		// remove CommitInterval to avoid auto commit
 	})
-	
 
 	return &Reader{reader: reader}
 }
 
 // Start begins consuming messages and calls the handler for each one
+// Commits offsets ONLY after handler succeeds
 func (r *Reader) Start(ctx context.Context, handler func(key, value []byte) error) {
 	for {
 		m, err := r.reader.ReadMessage(ctx)
 		if err != nil {
-			// Exit on context cancellation
 			if ctx.Err() != nil {
 				log.Println("Kafka reader stopped:", ctx.Err())
 				return
 			}
-
-			// Log and retry on temporary errors
 			log.Println("Kafka read error:", err)
 			time.Sleep(time.Second)
 			continue
 		}
 
-		// Log received message (remove or adjust for high throughput)
 		log.Printf("Received message: topic=%s partition=%d offset=%d key=%s value=%s\n",
 			m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
 
-		// Call user handler
 		if handler != nil {
 			if err := handler(m.Key, m.Value); err != nil {
-				log.Println("Handler error:", err)
+				log.Println("Handler error, offset not committed:", err)
+				// optionally: retry here
+				continue
+			}
+
+			// Commit offset AFTER successful processing
+			if err := r.reader.CommitMessages(ctx, m); err != nil {
+				log.Println("Failed to commit offset:", err)
+			} else {
+				log.Printf("Offset committed: partition=%d offset=%d\n", m.Partition, m.Offset)
 			}
 		}
 	}
